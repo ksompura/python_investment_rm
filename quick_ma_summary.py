@@ -4,7 +4,6 @@ from pandas_datareader import data as pdr
 import yfinance as yf
 import datetime as dt
 
-
 yf.pdr_override()
 
 stock=input("Enter a stock ticker symbol: ")
@@ -51,5 +50,6 @@ for i in df.index:
         print("The close is lower")
         close_l += 1
 
+# Get a quick glance at the closing price vs moving average
 print(f"Days adj close price was greater than moving avg: {close_h}")
 print(f"Days adj close price was less than moving avg: {close_l}")
