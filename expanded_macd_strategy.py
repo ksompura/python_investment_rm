@@ -17,11 +17,16 @@ yf.pdr_override()
 
 stock=input("Enter a stock ticker symbol: ")
 
-start_year = 2019
+start_year = 2021
 start_month = 1
 start_day = 1
 
+end_year = 2019
+end_month = 5
+end_day = 24
+
 start = dt.datetime(start_year, start_month, start_day)
+end = dt.datetime(end_year, end_month, end_day)
 now = dt.datetime.now()
 
 df = pdr.get_data_yahoo(stock, start, now)
@@ -81,19 +86,25 @@ ng = 0 #number of gains
 losses = 0
 nl = 0 #number of losses
 total_return = 1 # will be used to calculate total return
+return_list =[]
 
 #loop through each trade and see if it one or lost
 for i in percent_change:
-    if i>0 :
+    if (i>0):
         gains += i 
         ng += 1
-        total_return = total_return*(1 + (i/100))
     else:
         losses += i
         nl += 1
-        total_return = total_return*(1 + (i/100))
+    total_return=total_return*((i/100)+1)
+    return_list.append(total_return)
     
-total_return = round(total_return, 2) # remove the inital portion of move invested to see total capital gains or losses only
+
+
+total_return = round((total_return-1)*100, 2) # remove the inital portion of move invested to see total capital gains or losses only
+returns = list(map(lambda x: f"{round((x-1)*100,2)}%", return_list))
+
+
 
 # calculate average gain and average loss
 if ng > 0:
@@ -128,6 +139,4 @@ print(f"Average Loss: {avg_loss}")
 print(f"Max Return: {max_return}")
 print(f"Max Loss: {max_loss}")
 print(f"Total return over {ng+nl} trades: {total_return}%" )
-
-######
-# FIX total return
+print(f"Each trade return: {returns}")
