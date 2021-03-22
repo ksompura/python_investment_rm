@@ -17,7 +17,7 @@ yf.pdr_override()
 
 stock=input("Enter a stock ticker symbol: ")
 
-start_year = 2021
+start_year = 2016
 start_month = 1
 start_day = 1
 
