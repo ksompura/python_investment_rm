@@ -6,6 +6,7 @@ from tkinter import Tk
 from tkinter.filedialog import askopenfilename
 import os
 from pandas import ExcelWriter
+from price_relativity import price_relativity as pr
 
 yf.pdr_override() 
 start =dt.datetime(2017,1,1)
@@ -19,18 +20,20 @@ dir1 = 'C:\\'
 filePath=r"C:\Users\Keshav Sompura\Documents\Python Projects\RichardStocks.xlsx"
 
 stocklist = pd.read_excel(filePath)
-stocklist=stocklist[:200] # WARNING remove if want to screen all stocks in list, want to check if you are allowed to scrape thousands of stock 
+stocklist=stocklist[:50] # WARNING remove if want to screen all stocks in list, want to check if you are allowed to scrape thousands of stock 
 # print(stocklist)
 
-export_list = pd.DataFrame(columns =["Stock", "50 Day MA", "150 Day MA", "200 Day MA", "52 Week Low", "52 Week High"]) #"52 Week Vol High"
+export_list = pd.DataFrame(columns =["Stock", "50 Day MA", "150 Day MA", "200 Day MA", "52 Week Low", "52 Week High","Pct change 5 Day MA"]) #"52 Week Vol High"
 
 for i in stocklist.index:
     stock = str(stocklist["Symbol"][i])
 
 
+
     try:
         df = pdr.get_data_yahoo(stock, start, now)
         
+
         sma_used = [50,150,200]
         for x in sma_used:
             sma = x
@@ -38,8 +41,21 @@ for i in stocklist.index:
             # df[f"Vol_SMA_{sma}"] = df.iloc[:,6].rolling(window=sma).mean()
             df[f"SMA_{sma}"] = round(df.iloc[:,4].rolling(window=sma).mean(),2)
             
-        # print(df)    
+        
+
+
+        # append price relativity compared with SPY
+        df["PR"] = pr(stock)
+        # create new column for change in PR in percentage terms
+        df["Delta_PR (%)"] = df.pct_change()["PR"] * 100
+    
+        # create moving average for delta price relativity
+        ma = 5 # day period
+        df[f"del_pr_ma_{ma}"] = round(df.iloc[:,-1].rolling(window=ma).mean(),2)
+
+        # print(df)
         # break
+
         
         current_close = df["Adj Close"][-1]
         ma_50 = df["SMA_50"][-1]
@@ -48,6 +64,7 @@ for i in stocklist.index:
         low_52_wk=min(df["Adj Close"][-260:])
         high_52_wk=max(df["Adj Close"][-260:])
         high_vol_52_wk=max(df["Volume"][-260:])
+        del_pr_ma_5 = df["del_pr_ma_5"][-1]
         # current_vol = df["Volume"][-1]
         # vol_ma_50 = df["Vol_SMA_50"][-1]
         
@@ -72,8 +89,8 @@ for i in stocklist.index:
         else:
             cond_2 = False
         #Condtion 3: 200 SMA trending up for > 1 month (preferably 4-5 months min in most cases)
-        # if (ma_200 > ma_200_20past):
-        if (ma_200 > ma_200_80past):
+        if (ma_200 > ma_200_20past):
+        # if (ma_200 > ma_200_80past):
             cond_3 = True
         else:
             cond_3 = False
@@ -98,7 +115,11 @@ for i in stocklist.index:
         else:
             cond_7 = False
         #Condition 8: Relative Strength ranking (RS ranking), as repored in Investor's Business Daily, is no less than 70 (try to figure out and program it in)
-
+        #My version of Relative Strength compared to S&P 500 
+        if (del_pr_ma_5) >= 1.5: #greater than 1.5%
+            cond_8 = True
+        else:
+            cond_8 = False
 
         #Condition 9: Current volume within 10% of max volume
         # if (current_vol >= high_vol_52_wk*0.10):
@@ -106,8 +127,8 @@ for i in stocklist.index:
         # else:
         #     cond_9 = False
 
-        if (cond_1 and cond_2 and cond_3 and cond_4 and cond_5 and cond_6 and cond_7): #and cond_9
-            export_list = export_list.append({"Stock": stock, "50 Day MA": ma_50, "150 Day MA":ma_150, "200 Day MA":ma_200, "52 Week Low":low_52_wk, "52 Week High":high_52_wk},ignore_index=True) #,"52 Week Vol High":high_vol_52_wk
+        if (cond_1 and cond_2 and cond_3 and cond_4 and cond_5 and cond_6 and cond_7 and cond_8): #and cond_9
+            export_list = export_list.append({"Stock": stock, "50 Day MA": ma_50, "150 Day MA":ma_150, "200 Day MA":ma_200, "52 Week Low":low_52_wk, "52 Week High":high_52_wk, "Pct change 5 Day MA":del_pr_ma_5},ignore_index=True) #,"52 Week Vol High":high_vol_52_wk
         else:
             print(f"{stock} doesn't meet the criteria")
         
@@ -118,8 +139,8 @@ for i in stocklist.index:
         
 print(export_list)
 
-# new_file = os.path.dirname(filePath)+ "/Screen_Output.xlsx"
+new_file = os.path.dirname(filePath)+ "/Screen_Output.xlsx"
 
-# writer = ExcelWriter(new_file)
-# export_list.to_excel(writer,"Sheet1")
-# writer.save()
+writer = ExcelWriter(new_file)
+export_list.to_excel(writer,"Sheet1")
+writer.save()
